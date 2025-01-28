@@ -16,13 +16,10 @@ Updated CSV written to /absolute/path/to/countries-file.csv
 
 ```bash
 # failures
-
 > ./GetCountries
 Enter a filepath to a csv!
-
 > ./GetCountries ./path/to/file.txt
 Invalid file format! .txt
-
 > ./GetCountries /path/to/missing/file.csv
 File does not exist! '/path/to/missing/file.csv'
 ```
