@@ -9,8 +9,22 @@ Uses [postcodes.io](https://postcodes.io/) for postcode lookups.
 A single argument is **required**. Must be a relative or absolute path to a csv file.
 
 ```bash
+# success!
 > ./GetCountries ./path/to/file.csv
 Updated CSV written to /absolute/path/to/countries-file.csv
+```
+
+```bash
+# failures
+
+> ./GetCountries
+Enter a filepath to a csv!
+
+> ./GetCountries ./path/to/file.txt
+Invalid file format! .txt
+
+> ./GetCountries /path/to/missing/file.csv
+File does not exist! '/path/to/missing/file.csv'
 ```
 
 ## Example
