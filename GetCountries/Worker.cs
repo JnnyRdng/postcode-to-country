@@ -1,3 +1,4 @@
+using System.Dynamic;
 using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
@@ -9,7 +10,7 @@ public class Worker
     private const string Baseurl = "https://api.postodes.io/postcodes/";
     private string FullPath { get; }
     private string OutputFilePath { get; }
-    private List<VetPractice> ParseResult { get; set; } = new();
+    private List<dynamic> ParseResult { get; set; } = new();
     private List<string> Postcodes { get; set; } = new();
 
     public Worker(string? arg)
@@ -51,12 +52,12 @@ public class Worker
         };
         using var reader = new StreamReader(FullPath);
         using var csv = new CsvReader(reader, config);
-        ParseResult = csv.GetRecords<VetPractice>().ToList();
+        ParseResult = csv.GetRecords<dynamic>().ToList();
     }
 
     private void MapToPostcodes()
     {
-        Postcodes = ParseResult.Select(vp => vp.Postcode).ToList();
+        Postcodes = ParseResult.Select(vp => (string)vp.postcode).ToList();
     }
 
     private async Task FetchPostcodesAndMerge()
@@ -68,11 +69,22 @@ public class Worker
 
     private void MergeData(List<PostcodeInfo> postcodeInfo)
     {
-        foreach (var vp in ParseResult)
+        for (int i = 0; i < ParseResult.Count; i++)
         {
-            var found = postcodeInfo.Find(p => p.postcode == vp.Postcode);
+            var vp = ParseResult[i];
+            var found = postcodeInfo.Find(p => p.postcode == (string)vp.postcode);
             if (found == null) continue;
-            vp.Country = found.country;
+
+            var updatedVp = new ExpandoObject();
+            var updatedDict = (IDictionary<string, object>)updatedVp;
+
+            foreach (var property in (IDictionary<string, object>)vp)
+            {
+                updatedDict[property.Key] = property.Value;
+            }
+
+            updatedDict["country"] = found.country;
+            ParseResult[i] = updatedVp;
         }
     }
 
