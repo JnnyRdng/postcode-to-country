@@ -16,7 +16,7 @@ Updated CSV written to /absolute/path/to/countries-file.csv
 ## Example
 
 ```csv
-# /home/me/files/nputfile.csv
+# /home/me/files/inputfile.csv
 foo, bar, postcode, baz
   1,   2, SW19 5AE,   4
 ```
