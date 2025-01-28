@@ -4,15 +4,17 @@ namespace GetCountries
 {
     internal class Program
     {
-        static async Task Main(string[] args)
+        static async Task<int> Main(string[] args)
         {
             if (args.Length != 1)
             {
-                throw new ArgumentException("Enter a filepath to a csv file!");
+                Console.WriteLine("Enter a filepath to a csv!");
+                return 1;
             }
 
             var worker = new Worker(args[0]);
-            await worker.Run();
+            var res = await worker.Run();
+            return res;
         }
     }
 }

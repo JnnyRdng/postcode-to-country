@@ -9,38 +9,45 @@ public class Worker
 {
     private const string Baseurl = "https://api.postodes.io/postcodes/";
     private string FullPath { get; }
-    private string OutputFilePath { get; }
+    private string OutputFilePath { get; } = string.Empty;
     private List<dynamic> ParseResult { get; set; } = new();
     private List<string> Postcodes { get; set; } = new();
 
-    public Worker(string? arg)
-    {
-        if (arg == null)
-        {
-            throw new ArgumentException("CLI argument missing!");
-        }
+    private readonly bool _isReady;
 
+    public Worker(string arg)
+    {
         FullPath = Path.GetFullPath(arg);
         if (!File.Exists(FullPath))
         {
-            throw new FileNotFoundException($"File does not exist! '{FullPath}'");
+            Console.WriteLine($"File does not exist! '{FullPath}'");
+            return;
         }
 
-        var outputFile = $"countries-{Path.GetFileName(FullPath)}";
-        var outputDir = Path.GetDirectoryName(FullPath);
-        if (outputDir == null)
+        var inputFileName = Path.GetFileName(FullPath);
+        var ext = Path.GetExtension(inputFileName);
+        if (ext != ".csv")
         {
-            throw new DirectoryNotFoundException($"Directory does not exist!");
+            Console.WriteLine($"Invalid file format! {ext}");
+            return;
         }
-        OutputFilePath = Path.Combine(outputDir, outputFile);
+
+        var outputFile = $"countries-{inputFileName}";
+        var outputDir = Path.GetDirectoryName(FullPath);
+
+        OutputFilePath = Path.Combine(outputDir!, outputFile);
+        _isReady = true;
     }
 
-    public async Task Run()
+    public async Task<int> Run()
     {
+        if (!_isReady) return 1;
         ParseCsv();
         MapToPostcodes();
         await FetchPostcodesAndMerge();
         WriteCsv();
+        Console.WriteLine($"Updated CSV written to {OutputFilePath}");
+        return 0;
     }
 
     private void ParseCsv()
