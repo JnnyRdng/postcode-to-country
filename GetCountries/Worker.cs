@@ -76,7 +76,7 @@ public class Worker
 
     private void MergeData(List<PostcodeInfo> postcodeInfo)
     {
-        for (int i = 0; i < ParseResult.Count; i++)
+        for (var i = 0; i < ParseResult.Count; i++)
         {
             var vp = ParseResult[i];
             var found = postcodeInfo.Find(p => p.postcode == (string)vp.postcode);
