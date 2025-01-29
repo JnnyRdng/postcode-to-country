@@ -38,7 +38,7 @@ public class PostcodeService
         _httpClient = new HttpClient();
     }
 
-    public async Task<List<PostcodeInfo>> GetBulkPostcodes(List<string> postcodes)
+    public async Task<List<PostcodeResult>> GetBulkPostcodes(List<string> postcodes)
     {
         var request = new PostcodeRequest { postcodes = postcodes };
         var content = new StringContent(JsonConvert.SerializeObject(request), Encoding.UTF8, "application/json");
@@ -49,12 +49,13 @@ public class PostcodeService
         var responseString = await response.Content.ReadAsStringAsync();
         var postcodeResponse = JsonConvert.DeserializeObject<PostcodeResponse>(responseString);
 
-        var result = new List<PostcodeInfo>();
+        var result = new List<PostcodeResult>();
+        if (postcodeResponse == null) return result;
         foreach (var item in postcodeResponse.Result)
         {
-            if (item.Result != null)
+            if (item != null)
             {
-                result.Add(item.Result);
+                result.Add(item);
             }
         }
 

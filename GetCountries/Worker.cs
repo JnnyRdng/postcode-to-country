@@ -70,16 +70,16 @@ public class Worker
     private async Task FetchPostcodesAndMerge()
     {
         var service = new PostcodeService();
-        var postcodeInfo = await service.GetBulkPostcodes(Postcodes);
-        MergeData(postcodeInfo);
+        var postcodeResults = await service.GetBulkPostcodes(Postcodes);
+        MergeData(postcodeResults);
     }
 
-    private void MergeData(List<PostcodeInfo> postcodeInfo)
+    private void MergeData(List<PostcodeResult> postcodeInfo)
     {
         for (var i = 0; i < ParseResult.Count; i++)
         {
             var vp = ParseResult[i];
-            var found = postcodeInfo.Find(p => p.postcode == (string)vp.postcode);
+            var found = postcodeInfo.Find(p => p.Query == (string)vp.postcode);
             if (found == null) continue;
 
             var updatedVp = new ExpandoObject();
@@ -90,7 +90,7 @@ public class Worker
                 updatedDict[property.Key] = property.Value;
             }
 
-            updatedDict["country"] = found.country;
+            updatedDict["country"] = found.Result.country;
             ParseResult[i] = updatedVp;
         }
     }
