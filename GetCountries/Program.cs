@@ -1,20 +1,22 @@
-﻿using Microsoft.VisualBasic.FileIO;
+﻿using Spectre.Console.Cli;
 
 namespace GetCountries
 {
-    internal class Program
+    public static class Program
     {
-        static async Task<int> Main(string[] args)
+        public static int Main(string[] args)
         {
-            if (args.Length != 1)
+            var app = new CommandApp<GetCountriesCommand>()
+                .WithDescription("Adds a new column to csv/tsv files with a country found from a postcode column.");
+            app.Configure(config =>
             {
-                Console.WriteLine("Enter a filepath to a csv!");
-                return 1;
-            }
+                config.SetApplicationName("GetCountries");
+#if DEBUG
+                config.PropagateExceptions();
+#endif
+            });
 
-            var worker = new Worker(args[0]);
-            var res = await worker.Run();
-            return res;
+            return app.Run(args);
         }
     }
 }

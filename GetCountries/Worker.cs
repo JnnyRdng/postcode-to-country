@@ -2,57 +2,54 @@ using System.Dynamic;
 using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
+using GetCountries.Extensions;
+using Spectre.Console;
 
 namespace GetCountries;
 
 public class Worker
 {
-    private const string Baseurl = "https://api.postodes.io/postcodes/";
+    private GetCountriesOptions Options { get; }
     private string FullPath { get; }
-    private string OutputFilePath { get; } = string.Empty;
+    private string OutputFilePath { get; }
     private List<dynamic> ParseResult { get; set; } = new();
-    private List<string> Postcodes { get; set; } = new();
+    private List<string?> Postcodes { get; set; } = new();
 
     private readonly bool _isReady;
 
-    public Worker(string arg)
+    public Worker(GetCountriesOptions options)
     {
-        FullPath = Path.GetFullPath(arg);
-        if (!File.Exists(FullPath))
-        {
-            Console.WriteLine($"File does not exist! '{FullPath}'");
-            return;
-        }
-
-        var inputFileName = Path.GetFileName(FullPath);
-        var ext = Path.GetExtension(inputFileName);
-        if (ext != ".csv")
-        {
-            Console.WriteLine($"Invalid file format! {ext}");
-            return;
-        }
-
-        var outputFile = $"countries-{inputFileName}";
-        var outputDir = Path.GetDirectoryName(FullPath);
-
-        OutputFilePath = Path.Combine(outputDir!, outputFile);
+        Options = options;
+        FullPath = options.GetFullInputPath();
+        OutputFilePath = options.GetFullOutputPath();
         _isReady = true;
     }
 
     public async Task<int> Run()
     {
-        if (!_isReady) return 1;
-        ParseCsv();
+        AnsiConsole.MarkupLine("[bold]Starting postcode lookup...[/]");
+        if (!_isReady || !ParseCsv())
+        {
+            return 1;
+        }
+
         MapToPostcodes();
         await FetchPostcodesAndMerge();
         WriteCsv();
-        Console.WriteLine($"Updated CSV written to {OutputFilePath}");
+        AnsiConsole.MarkupLine("Output file written to:");
+        var path = new TextPath(OutputFilePath)
+            .RootColor(Color.Yellow)
+            .SeparatorColor(Color.Yellow)
+            .StemColor(Color.Yellow)
+            .LeafColor(Color.Yellow);
+        AnsiConsole.Write(path);
+        AnsiConsole.WriteLine();
         return 0;
     }
 
-    private void ParseCsv()
+    private bool ParseCsv()
     {
-        var config = new CsvConfiguration((CultureInfo.InvariantCulture))
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
             HeaderValidated = null,
             MissingFieldFound = null,
@@ -60,11 +57,17 @@ public class Worker
         using var reader = new StreamReader(FullPath);
         using var csv = new CsvReader(reader, config);
         ParseResult = csv.GetRecords<dynamic>().ToList();
+        var header = Options.HeaderName;
+        var headerRecord = csv.HeaderRecord;
+        if (headerRecord != null && headerRecord.Contains(header)) return true;
+
+        AnsiConsole.MarkupLine($"[bold red]Error:[/] Column header [bold]{header}[/] not found in input file.");
+        return false;
     }
 
     private void MapToPostcodes()
     {
-        Postcodes = ParseResult.Select(vp => (string)vp.postcode).ToList();
+        Postcodes = ParseResult.Select(vp => (string?)((IDictionary<string, object>)vp)[Options.HeaderName]).ToList();
     }
 
     private async Task FetchPostcodesAndMerge()
@@ -74,31 +77,34 @@ public class Worker
         MergeData(postcodeResults);
     }
 
-    private void MergeData(List<PostcodeResult> postcodeInfo)
+    private void MergeData(List<PostcodeResult> postcodeResults)
     {
         for (var i = 0; i < ParseResult.Count; i++)
         {
-            var vp = ParseResult[i];
-            var found = postcodeInfo.Find(p => p.Query == (string)vp.postcode);
-            if (found == null) continue;
+            var parseResult = ParseResult[i];
+            var found = postcodeResults.Find(pi =>
+                pi.Query == (string?)((IDictionary<string, object>)parseResult)[Options.HeaderName]);
+            var updated = new ExpandoObject();
+            var updatedDict = (IDictionary<string, object>)updated;
 
-            var updatedVp = new ExpandoObject();
-            var updatedDict = (IDictionary<string, object>)updatedVp;
-
-            foreach (var property in (IDictionary<string, object>)vp)
+            foreach (var property in (IDictionary<string, object>)parseResult)
             {
                 updatedDict[property.Key] = property.Value;
             }
 
-            updatedDict["country"] = found.Result.country;
-            ParseResult[i] = updatedVp;
+            updatedDict[Options.CountryHeaderName] = found?.Result?.country ?? string.Empty;
+            ParseResult[i] = updated;
         }
     }
 
     private void WriteCsv()
     {
         using var writer = new StreamWriter(OutputFilePath);
-        using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            Delimiter = Options.GetOutputExtension().Item1.ToDelimiter(),
+        };
+        using var csv = new CsvWriter(writer, config);
         csv.WriteRecords(ParseResult);
     }
 }

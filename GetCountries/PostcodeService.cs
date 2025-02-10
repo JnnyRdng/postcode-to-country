@@ -1,10 +1,8 @@
-namespace GetCountries;
-
-using System.Collections.Generic;
-using System.Net.Http;
 using System.Text;
-using System.Threading.Tasks;
+using GetCountries.Extensions;
 using Newtonsoft.Json;
+
+namespace GetCountries;
 
 public class PostcodeInfo
 {
@@ -38,9 +36,9 @@ public class PostcodeService
         _httpClient = new HttpClient();
     }
 
-    public async Task<List<PostcodeResult>> GetBulkPostcodes(List<string> postcodes)
+    public async Task<List<PostcodeResult>> GetBulkPostcodes(List<string?> postcodes)
     {
-        var request = new PostcodeRequest { postcodes = postcodes };
+        var request = new PostcodeRequest { postcodes = postcodes.NotEmpty().ToList() };
         var content = new StringContent(JsonConvert.SerializeObject(request), Encoding.UTF8, "application/json");
 
         var response = await _httpClient.PostAsync(ApiUrl, content);
