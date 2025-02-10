@@ -46,8 +46,9 @@ Output file written to:
 # failures
 > ./GetCountries ./path/to/file.txt
 Error: Input file must be .csv or .tsv. Found .txt.
+
 > ./GetCountries /path/to/missing/file.csv
-Error: Please specify a valid input file. "./path/to/file.txt"
+Error: Please specify a valid input file. "./path/to/file.csv"
 ```
 
 ## Example
