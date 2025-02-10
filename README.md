@@ -1,27 +1,53 @@
 # Postcode-To-Country
 
-Given a csv file with a column named `postcode` (containing a valid UK postcode!) outputs a new csv file with a `country` column appended.
+Adds a new column to csv/tsv files with a country found from a postcode column.
 
 Uses [postcodes.io](https://postcodes.io/) for postcode lookups.
 
 ## Usage
 
-A single argument is **required**. Must be a relative or absolute path to a csv file.
+```bash
+> ./GetCountries --help
+
+DESCRIPTION:
+Adds a new column to csv/tsv files with a country found from a postcode column.
+
+USAGE:
+    GetCountries <INPUTFILE> [OPTIONS]
+
+ARGUMENTS:
+    <INPUTFILE>    Required. Absolute or relative path to csv or tsv file. 
+
+OPTIONS:
+                                    DEFAULT                                                                   
+    -h, --help                                  Prints help information                                       
+    -o, --output <FILENAME>                     Optional. Output filename with extension or without extension.
+                                                Can be used to convert between valid file formats.            
+    -c, --column <COLUMN>           postcode    Optional. Postcode column column name. Case-sensitive.        
+    -n, --new-column <NEWCOLUMN>    country     Optional. Name of appended country column.                    
+
+  
+``` 
 
 ```bash
 # success!
 > ./GetCountries ./path/to/file.csv
-Updated CSV written to /absolute/path/to/countries-file.csv
+Starting postcode lookup...
+Output file written to:
+./path/to/file-with-countries.csv
+
+> ./GetCountries ./path/to/file.csv -o new-file.tsv
+Starting postcode lookup...
+Output file written to:
+./path/to/new-file.tsv
 ```
 
 ```bash
 # failures
-> ./GetCountries
-Enter a filepath to a csv!
 > ./GetCountries ./path/to/file.txt
-Invalid file format! .txt
+Error: Input file must be .csv or .tsv. Found .txt.
 > ./GetCountries /path/to/missing/file.csv
-File does not exist! '/path/to/missing/file.csv'
+Error: Please specify a valid input file. "./path/to/file.txt"
 ```
 
 ## Example
@@ -34,11 +60,13 @@ foo, bar, postcode, baz
 
 ```bash
 > ./GetCountries /home/me/files/inputfile.csv
-Updated CSV written to /home/me/countries-inputfile.csv
+Starting postcode lookup...
+Output file written to:
+/home/me/inputfile-with-countries.csv
 ```
 
 ```csv
-# /home/me/files/countries-inputfile.csv
+# /home/me/files/inputfile-with-countries.csv
 foo, bar, postcode, baz, country
   1,   2, SW19 5AE,   4, England
 ```
