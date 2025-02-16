@@ -46,9 +46,12 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*
+          files: |
+            artifacts/GetCountries-linux-x64/GetCountries
+            artifacts/GetCountries-macos-x64/GetCountries
+            artifacts/GetCountries-win-x64/GetCountries.exe
           token: ${{ secrets.PAT_TOKEN }}
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          draft: true
+          draft: false
           prerelease: false
