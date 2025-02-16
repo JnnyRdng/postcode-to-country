@@ -37,33 +37,25 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu
-            artifact: GetCountries
-            asset_name: GetCountries-linux
-          - os: windows
-            artifact: GetCountries.exe
-            asset_name: GetCountries-windows
-          - os: macos
-            artifact: GetCountries
-            asset_name: GetCountries-macos
     steps:
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
     
-      - name: Debug - List Files
-        run: ls -R artifacts
+      - name: Rename
+        run: |
+          mv artifacts/GetCountries-ubuntu/GetCountries artifacts/GetCountries-ubuntu/GetCountries-linux 
+          mv artifacts/GetCountries-macos/GetCountries artifacts/GetCountries-ubuntu/GetCountries-macos 
+          mv artifacts/GetCountries-windows/GetCountries.exe artifacts/GetCountries-ubuntu/GetCountries-windows.exe 
       
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/GetCountries-${{ matrix.os }}/${{ matrix.artifact }}
-          asset_name: ${{ matrix.asset_name }}
+            artifacts/GetCountries-ubuntu/GetCountries-linux
+            artifacts/GetCountries-macos/GetCountries-macos
+            artifacts/GetCountries-windows/GetCountries-windows.exe
           token: ${{ secrets.PAT_TOKEN }}
           tag_name: ${{ github.ref_name }}-${{ github.run_id }}
           name: Release ${{ github.ref_name }}-${{ github.run_id }}
