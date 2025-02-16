@@ -6,7 +6,7 @@ public static class Extensions
     {
         return source.Where(x => !string.IsNullOrWhiteSpace(x));
     }
-    
+
     public static string ToDelimiter(this FileType fileType)
     {
         return fileType switch
