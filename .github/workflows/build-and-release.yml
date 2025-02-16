@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu, macos, windows]
     
     steps:
       - name: Checkout repository
@@ -26,7 +26,7 @@ jobs:
         run: dotnet restore GetCountries/GetCountries.csproj
       
       - name: Build project
-        run: dotnet publish GetCountries/GetCountries.csproj -c Release -o publish-${{ matrix.os }} --self-contained true -r ${{ matrix.os == 'ubuntu-latest' && 'linux-x64' || matrix.os == 'macos-latest' && 'osx-x64' || 'win-x64' }}
+        run: dotnet publish GetCountries/GetCountries.csproj -c Release -o publish-${{ matrix.os }} --self-contained true -r ${{ matrix.os == 'ubuntu' && 'linux-x64' || matrix.os == 'macos' && 'osx-x64' || 'win-x64' }}
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -50,11 +50,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/GetCountries-linux-x64/GetCountries
-            artifacts/GetCountries-macos-x64/GetCountries
-            artifacts/GetCountries-win-x64/GetCountries.exe
+            artifacts/GetCountries-ubuntu/GetCountries
+            artifacts/GetCountries-macos/GetCountries
+            artifacts/GetCountries-win/GetCountries.exe
           token: ${{ secrets.PAT_TOKEN }}
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}-${{ github.run_id }}
+          name: Release ${{ github.ref_name }}-${{ github.run_id }}
           draft: false
           prerelease: false
