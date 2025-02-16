@@ -47,16 +47,6 @@ public class PostcodeService
         var responseString = await response.Content.ReadAsStringAsync();
         var postcodeResponse = JsonConvert.DeserializeObject<PostcodeResponse>(responseString);
 
-        var result = new List<PostcodeResult>();
-        if (postcodeResponse == null) return result;
-        foreach (var item in postcodeResponse.Result)
-        {
-            if (item != null)
-            {
-                result.Add(item);
-            }
-        }
-
-        return result;
+        return postcodeResponse?.Result ?? new List<PostcodeResult>();
     }
 }
