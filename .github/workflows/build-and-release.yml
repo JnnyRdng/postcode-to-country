@@ -1,120 +1,54 @@
-name: Build and Release Executables
+name: Build and Release
 
 on:
   push:
-    branches: [ "main" ] # Trigger this workflow when code is pushed to the 'main' branch
-  workflow_dispatch: # Allows you to manually trigger the workflow from the GitHub Actions UI
+    branches: ['main']
+    tags:
+      - 'v*'
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup .NET SDK
+      
+      - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '7.x' # Replace with your project's .NET SDK version if different (e.g., '7.0.x', '6.0.x')
-
-      - name: Publish for Windows
-        run: dotnet publish -c Release -r win-x64 --self-contained true -o ./publish/win-x64
-
-      - name: Rename Executable (Windows)
-        shell: bash # Use bash shell for rename command
-        run: |
-          cd ./publish/win-x64
-          rename .exe ${{ github.event.repository.name }}-win-x64.exe * # Rename all .exe files (should just be your main exe)
-
-      - name: Upload Artifact (Windows)
-        uses: actions/upload-artifact@v3
+          dotnet-version: '7.0.x'
+      
+      - name: Restore dependencies
+        run: dotnet restore GetCountries/GetCountries.csproj
+      
+      - name: Build project
+        run: dotnet publish GetCountries/GetCountries.csproj -c Release -o publish-${{ matrix.os }} --self-contained true -r ${{ matrix.os == 'ubuntu-latest' && 'linux-x64' || matrix.os == 'macos-latest' && 'osx-x64' || 'win-x64' }}
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: windows-executable
-          path: ./publish/win-x64/*.exe # Upload all .exe files from the publish folder
-
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: '8.0.x' # Replace with your project's .NET SDK version if different
-
-      - name: Publish for macOS
-        run: dotnet publish -c Release -r osx-x64 --self-contained true -o ./publish/osx-x64
-
-      - name: Rename Executable (macOS)
-        shell: bash
-        run: |
-          cd ./publish/osx-x64
-          rename '' '-osx-x64' * # Rename the executable by adding '-osx-x64' suffix
-
-      - name: Upload Artifact (macOS)
-        uses: actions/upload-artifact@v3
-        with:
-          name: macos-executable
-          path: ./publish/osx-x64/* # Upload all files from the publish folder (should be your executable)
-
-  build-linux:
+          name: GetCountries-${{ matrix.os }}
+          path: publish-${{ matrix.os }}/*
+  
+  release:
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v3
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
         with:
-          dotnet-version: '8.0.x' # Replace with your project's .NET SDK version if different
-
-      - name: Publish for Linux
-        run: dotnet publish -c Release -r linux-x64 --self-contained true -o ./publish/linux-x64
-
-      - name: Rename Executable (Linux)
-        shell: bash
-        run: |
-          cd ./publish/linux-x64
-          rename '' '-linux-x64' * # Rename the executable by adding '-linux-x64' suffix
-
-      - name: Upload Artifact (Linux)
-        uses: actions/upload-artifact@v3
+          path: artifacts
+      
+      - name: Create release
+        uses: softprops/action-gh-release@v2
         with:
-          name: linux-executable
-          path: ./publish/linux-x64/* # Upload all files from the publish folder (should be your executable)
-
-  release:
-    needs: [build-windows, build-macos, build-linux] # This job will only run after all build jobs are successful
-    runs-on: ubuntu-latest # This job can run on any runner, ubuntu-latest is fine
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download Artifacts
-        uses: actions/download-artifact@v3
-        path: artifacts
-
-      - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ github.run_number }} # Creates a tag like 'v123' based on the run number
-          release_name: Release v${{ github.run_number }}
-          body: |
-            ## Executables for Windows, macOS, and Linux
-
-            This release includes self-contained executables for:
-
-            - **Windows:**  `{{ github.event.repository.name }}-win-x64.exe`
-            - **macOS:** `{{ github.event.repository.name }}-osx-x64`
-            - **Linux:** `{{ github.event.repository.name }}-linux-x64`
-
-            Please download the appropriate executable for your operating system from the "Assets" below.
+          files: artifacts/**/*
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
-          artifacts: |
-            artifacts/windows-executable/*.exe
-            artifacts/macos-executable/*
-            artifacts/linux-executable/*
