@@ -61,7 +61,8 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          file: artifacts/GetCountries-${{ matrix.os }}/${{ matrix.artifact }}
+          files: |
+            artifacts/GetCountries-${{ matrix.os }}/${{ matrix.artifact }}
           asset_name: ${{ matrix.asset_name }}
           token: ${{ secrets.PAT_TOKEN }}
           tag_name: ${{ github.ref_name }}-${{ github.run_id }}
