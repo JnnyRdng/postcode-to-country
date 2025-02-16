@@ -43,7 +43,7 @@ jobs:
         with:
           path: artifacts
     
-      - name: Debug: List Files
+      - name: Debug - List Files
         run: ls -R artifacts
       
       - name: Create release
