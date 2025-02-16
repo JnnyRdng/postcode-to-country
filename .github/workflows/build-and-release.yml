@@ -1,0 +1,85 @@
+name: Build and Release
+
+env:
+  APP_NAME: GetCountries
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        configuration: [Release] # Or Debug if needed
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '7.x' # Or your .NET version
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build for ${{ matrix.os }}
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            dotnet build -c ${{ matrix.configuration }} -r win-x64 --self-contained true -o ./build/win-x64
+          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            dotnet build -c ${{ matrix.configuration }} -r osx-x64 --self-contained true -o ./build/osx-x64
+          elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            dotnet build -c ${{ matrix.configuration }} -r linux-x64 --self-contained true -o ./build/linux-x64
+          fi
+
+      - name: Create release artifacts
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            zip -r ${{ env.APP_NAME }}-win-x64.zip ./build/win-x64
+            echo "::set-output name=artifact_name::${{ env.APP_NAME }}-win-x64.zip"
+          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            tar -czvf ${{ env.APP_NAME }}-osx-x64.tar.gz ./build/osx-x64
+            echo "::set-output name=artifact_name::${{ env.APP_NAME }}-osx-x64.tar.gz"
+          elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            tar -czvf ${{ env.APP_NAME }}-linux-x64.tar.gz ./build/linux-x64
+            echo "::set-output name=artifact_name::${{ env.APP_NAME }}-linux-x64.tar.gz"
+          fi
+        id: create_artifact
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.APP_NAME }}-${{ matrix.os }}
+          path: ${{ steps.create_artifact.outputs.artifact_name }}
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ${{ env.APP_NAME }}-win-x64.zip
+            ${{ env.APP_NAME }}-osx-x64.tar.gz
+            ${{ env.APP_NAME }}-linux-x64.tar.gz
+          tag_name: ${{ github.ref }}
+          name: Release ${{ github.ref }}
+          body: |
+            Release notes for ${{ github.ref }} (You can customize this)
+
+      - name: Download all artifacts
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/download-artifact@v3
+
+      - name: Publish Release (Alternative - for single executable in release)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          gh release create ${{ github.ref }} --generate-notes --name "Release ${{ github.ref }}" --files ${{ env.APP_NAME }}-win-x64.zip ${{ env.APP_NAME }}-osx-x64.tar.gz ${{ env.APP_NAME }}-linux-x64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
