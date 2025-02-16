@@ -2,7 +2,6 @@ name: Build and Release
 
 on:
   push:
-    branches: ['main']
     tags:
       - 'v*'
 
@@ -57,7 +56,7 @@ jobs:
             artifacts/GetCountries-macos/GetCountries-macos
             artifacts/GetCountries-windows/GetCountries-windows.exe
           token: ${{ secrets.PAT_TOKEN }}
-          tag_name: ${{ github.ref_name }}-${{ github.run_id }}
-          name: Release ${{ github.ref_name }}-${{ github.run_id }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
