@@ -1,79 +1,120 @@
-name: Build and Release
-
-env:
-  APP_NAME: GetCountries
+name: Build and Release Executables
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - v*
+    branches: [ "main" ] # Trigger this workflow when code is pushed to the 'main' branch
+  workflow_dispatch: # Allows you to manually trigger the workflow from the GitHub Actions UI
 
 jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-        configuration: [Release] # Or Debug if needed
-
+  build-windows:
+    runs-on: windows-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET SDK
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '7.x' # Or your .NET version
+          dotnet-version: '7.x' # Replace with your project's .NET SDK version if different (e.g., '7.0.x', '6.0.x')
 
-      - name: Restore dependencies
-        run: dotnet restore
+      - name: Publish for Windows
+        run: dotnet publish -c Release -r win-x64 --self-contained true -o ./publish/win-x64
 
-      - name: Build for ${{ matrix.os }}
+      - name: Rename Executable (Windows)
+        shell: bash # Use bash shell for rename command
         run: |
-          dotnet build -c ${{ matrix.configuration }} --self-contained true -o ./build/${{ matrix.os }}
+          cd ./publish/win-x64
+          rename .exe ${{ github.event.repository.name }}-win-x64.exe * # Rename all .exe files (should just be your main exe)
 
-      - name: Create release artifacts
-        run: |
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            zip -r ${{ env.APP_NAME }}-win-x64.zip ./build/win-x64
-            echo "::set-output name=artifact_name::${{ env.APP_NAME }}-win-x64.zip"
-          elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            tar -czvf ${{ env.APP_NAME }}-osx-x64.tar.gz ./build/osx-x64
-            echo "::set-output name=artifact_name::${{ env.APP_NAME }}-osx-x64.tar.gz"
-          elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            tar -czvf ${{ env.APP_NAME }}-linux-x64.tar.gz ./build/linux-x64
-            echo "::set-output name=artifact_name::${{ env.APP_NAME }}-linux-x64.tar.gz"
-          fi
-        id: create_artifact
-
-      - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload Artifact (Windows)
+        uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.APP_NAME }}-${{ matrix.os }}
-          path: ${{ steps.create_artifact.outputs.artifact_name }}
+          name: windows-executable
+          path: ./publish/win-x64/*.exe # Upload all .exe files from the publish folder
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x' # Replace with your project's .NET SDK version if different
+
+      - name: Publish for macOS
+        run: dotnet publish -c Release -r osx-x64 --self-contained true -o ./publish/osx-x64
+
+      - name: Rename Executable (macOS)
+        shell: bash
+        run: |
+          cd ./publish/osx-x64
+          rename '' '-osx-x64' * # Rename the executable by adding '-osx-x64' suffix
+
+      - name: Upload Artifact (macOS)
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos-executable
+          path: ./publish/osx-x64/* # Upload all files from the publish folder (should be your executable)
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x' # Replace with your project's .NET SDK version if different
+
+      - name: Publish for Linux
+        run: dotnet publish -c Release -r linux-x64 --self-contained true -o ./publish/linux-x64
+
+      - name: Rename Executable (Linux)
+        shell: bash
+        run: |
+          cd ./publish/linux-x64
+          rename '' '-linux-x64' * # Rename the executable by adding '-linux-x64' suffix
+
+      - name: Upload Artifact (Linux)
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-executable
+          path: ./publish/linux-x64/* # Upload all files from the publish folder (should be your executable)
+
+  release:
+    needs: [build-windows, build-macos, build-linux] # This job will only run after all build jobs are successful
+    runs-on: ubuntu-latest # This job can run on any runner, ubuntu-latest is fine
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        path: artifacts
 
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            ${{ env.APP_NAME }}-win-x64.zip
-            ${{ env.APP_NAME }}-osx-x64.tar.gz
-            ${{ env.APP_NAME }}-linux-x64.tar.gz
-          tag_name: ${{ github.ref }}
-          name: Release ${{ github.ref }}
-          body: |
-            Release notes for ${{ github.ref }}
-
-      - name: Download all artifacts
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/download-artifact@v4
-
-      - name: Publish Release (Alternative)
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          gh release create ${{ github.ref }} --generate-notes --name "Release ${{ github.ref }}" --files ${{ env.APP_NAME }}-win-x64.zip ${{ env.APP_NAME }}-osx-x64.tar.gz ${{ env.APP_NAME }}-linux-x64.tar.gz
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }} # Creates a tag like 'v123' based on the run number
+          release_name: Release v${{ github.run_number }}
+          body: |
+            ## Executables for Windows, macOS, and Linux
+
+            This release includes self-contained executables for:
+
+            - **Windows:**  `{{ github.event.repository.name }}-win-x64.exe`
+            - **macOS:** `{{ github.event.repository.name }}-osx-x64`
+            - **Linux:** `{{ github.event.repository.name }}-linux-x64`
+
+            Please download the appropriate executable for your operating system from the "Assets" below.
+          draft: false
+          prerelease: false
+          artifacts: |
+            artifacts/windows-executable/*.exe
+            artifacts/macos-executable/*
+            artifacts/linux-executable/*
