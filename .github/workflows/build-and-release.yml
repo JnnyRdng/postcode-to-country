@@ -46,8 +46,8 @@ jobs:
       - name: Rename
         run: |
           mv artifacts/GetCountries-ubuntu/GetCountries artifacts/GetCountries-ubuntu/GetCountries-linux 
-          mv artifacts/GetCountries-macos/GetCountries artifacts/GetCountries-ubuntu/GetCountries-macos 
-          mv artifacts/GetCountries-windows/GetCountries.exe artifacts/GetCountries-ubuntu/GetCountries-windows.exe 
+          mv artifacts/GetCountries-macos/GetCountries artifacts/GetCountries-macos/GetCountries-macos 
+          mv artifacts/GetCountries-windows/GetCountries.exe artifacts/GetCountries-windows/GetCountries-windows.exe 
       
       - name: Create release
         uses: softprops/action-gh-release@v2
