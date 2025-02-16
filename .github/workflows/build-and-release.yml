@@ -26,7 +26,7 @@ jobs:
         run: dotnet restore GetCountries/GetCountries.csproj
       
       - name: Build project
-        run: dotnet publish GetCountries/GetCountries.csproj -c Release -o publish-${{ matrix.os }} --self-contained true -r ${{ matrix.os == 'ubuntu' && 'linux-x64' || matrix.os == 'macos' && 'osx-x64' || 'win-x64' }}
+        run: dotnet publish GetCountries/GetCountries.csproj -c Release -o publish-${{ matrix.os }} --self-contained true -p:PublishSingleFile=true -r ${{ matrix.os == 'ubuntu' && 'linux-x64' || matrix.os == 'macos' && 'osx-x64' || 'win-x64' }}
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
